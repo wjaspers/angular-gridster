@@ -1,8 +1,24 @@
-(function(angular) {
+/*global define:true*/
+(function(root, factory) {
 
 	'use strict';
 
-	angular.module('gridster', [])
+	if (typeof define === 'function' && define.amd) {
+		// AMD
+		define(['angular'], factory);
+	} else if (typeof exports === 'object') {
+		// CommonJS
+		module.exports = factory(require('angular'));
+	} else {
+		// Browser, nothing "exported". Only registered as a module with angular.
+		factory(root.angular);
+	}
+}(this, function(angular) {
+
+	'use strict';
+
+	// This returned angular module 'gridster' is what is exported.
+	return angular.module('gridster', [])
 
 	.constant('gridsterConfig', {
 		columns: 6, // number of columns in the grid
@@ -78,9 +94,10 @@
 			 * Clean up after yourself
 			 */
 			this.destroy = function() {
+				// empty the grid to cut back on the possibility
+				// of circular references
 				if (this.grid) {
-					this.grid.length = 0;
-					this.grid = null;
+					this.grid = [];
 				}
 				this.$element = null;
 			};
@@ -504,7 +521,7 @@
 			 * @param {Object} item The item which would be placed where the items in the Way are placed
 			 *
 			 */
-			this.itemsInTheWayCanFit = function (itemsInTheWay, row, col, item) {
+			this.itemsInTheWayCanFit = function(itemsInTheWay, row, col, item) {
 				var itemsInTheWayCanFit = true;
 				var itemsInTheWaySizeY = 0;
 				/* check for all items in the way */
@@ -528,7 +545,7 @@
 					return false;
 				}
 				return itemsInTheWayCanFit;
-			}
+			};
 
 			/**
 			 * Update gridsters height
@@ -554,8 +571,9 @@
 					}
 				}
 				var newHeight = this.maxRows - maxHeight > 0 ? Math.min(this.maxRows, maxHeight) : Math.max(this.maxRows, maxHeight);
-				if(newHeight>this.maxRows)
-					newHeight=this.maxRows;
+				if (newHeight > this.maxRows) {
+					newHeight = this.maxRows;
+				}
 				this.gridHeight = newHeight;
 			};
 
@@ -566,6 +584,10 @@
 			 * @param {Boolean} ceilOrFloor (Optional) Determines rounding method
 			 */
 			this.pixelsToRows = function(pixels, ceilOrFloor) {
+				if (!this.outerMargin) {
+					pixels += this.margins[0] / 2;
+				}
+
 				if (ceilOrFloor === true) {
 					return Math.ceil(pixels / this.curRowHeight);
 				} else if (ceilOrFloor === false) {
@@ -581,7 +603,7 @@
 			 * @param {Number} rows
 			 * @param {Boolean} ceilOrFloor (Optional) Determines rounding method
 			 */
-			this.rowsToPixels = function (rows, ceilOrFloor) {
+			this.rowsToPixels = function(rows, ceilOrFloor) {
 				if (ceilOrFloor === true) {
 					return Math.ceil(rows * this.curRowHeight);
 				} else if (ceilOrFloor === false) {
@@ -599,6 +621,10 @@
 			 * @returns {Number} The number of columns
 			 */
 			this.pixelsToColumns = function(pixels, ceilOrFloor) {
+				if (!this.outerMargin) {
+					pixels += this.margins[1] / 2;
+				}
+
 				if (ceilOrFloor === true) {
 					return Math.ceil(pixels / this.curColWidth);
 				} else if (ceilOrFloor === false) {
@@ -614,25 +640,25 @@
 	.directive('gridsterLayout', function() {
 		return {
 			restrict: 'E',
-			template: ''+
+			template: '' +
 				'<div class="grid-layout">' +
-					'<div ng-if="gridster.headers.length>0" class="headers" ng-attr-style="top:-{{gridster.headersHeight}}px;">' +
-						'<div ng-repeat="header in gridster.headers" class="row-header" ng-attr-style="height: {{gridster.curRowHeight}}px;width: {{gridster.curColWidth-gridster.margins[1]}}px;">{{header}}</div>' +
-					'</div>'+
-					'<div ng-repeat="column in range(gridster.columns) track by $index" class="column" ng-attr-style="width: {{gridster.curColWidth-gridster.margins[1]}}px; margin-left: {{gridster.margins[1]}}px; margin-top: {{gridster.margins[0]}}px;">' +
-						'<div ng-repeat="row in range(gridster.maxRows-1) track by $index" class="row" ng-attr-style="height: {{gridster.curRowHeight}}px;"></div>' +
-					'</div>'+
+				'<div ng-if="gridster.headers.length>0" class="headers" ng-attr-style="top:-{{gridster.headersHeight}}px;">' +
+				'<div ng-repeat="header in gridster.headers" class="row-header" ng-attr-style="height: {{gridster.curRowHeight}}px;width: {{gridster.curColWidth-gridster.margins[1]}}px;">{{header}}</div>' +
+				'</div>' +
+				'<div ng-repeat="column in range(gridster.columns) track by $index" class="column" ng-attr-style="width: {{gridster.curColWidth-gridster.margins[1]}}px; margin-left: {{gridster.margins[1]}}px; margin-top: {{gridster.margins[0]}}px;">' +
+				'<div ng-repeat="row in range(gridster.maxRows-1) track by $index" class="row" ng-attr-style="height: {{gridster.curRowHeight}}px;"></div>' +
+				'</div>' +
 				'</div>',
 			scope: true,
 			require: '^gridster',
-			link: function (scope, $el, attrs, gridster) {
+			link: function(scope, $el, attrs, gridster) {
 				/**
 				 * converts an integer to an array for ng-repeat
 				 * @returns {Array} count 
 				 */
-				scope.range = function (count) {
+				scope.range = function(count) {
 					return new Array(+count);
-				}
+				};
 				/** calcualte the current rowHeight */
 				gridster.curRowHeight = gridster.rowHeight;
 				if (typeof gridster.rowHeight === 'string') {
@@ -647,9 +673,9 @@
 				/* show headers? */
 				if (gridster.headers.length > 0) {
 					/** move gridster down, headers are set negative top like top: -30px */
-					gridster.headersHeight=30;
+					gridster.headersHeight = 30;
 					if (gridster.curRowHeight > 30) {
-						gridster.headersHeight=gridster.curRowHeight;
+						gridster.headersHeight = gridster.curRowHeight;
 					}
 					gridster.$element[0].style.top = gridster.headersHeight + 'px';
 					gridster.$element[0].style.marginBottom = gridster.headersHeight + 'px';
@@ -723,22 +749,27 @@
 
 						$elem.addClass('gridster');
 
+						var isVisible = function(ele) {
+							return ele.style.visibility !== 'hidden' && ele.style.display !== 'none';
+						};
+
 						function refresh(config) {
 							gridster.setOptions(config);
+
+							if (!isVisible($elem[0])) {
+								return;
+							}
 
 							// resolve "auto" & "match" values
 							if (gridster.width === 'auto') {
 								gridster.curWidth = $elem[0].offsetWidth || parseInt($elem.css('width'), 10);
-							}
-							else if (gridster.width === 'match') {
-								if(gridster.colWidth === 'auto'){
+							} else if (gridster.width === 'match') {
+								if (gridster.colWidth === 'auto') {
 									gridster.curWidth = $elem[0].offsetWidth || parseInt($elem.css('width'), 10);
+								} else {
+									gridster.curWidth = gridster.colWidth * gridster.columns + (gridster.outerMargin ? +gridster.margins[1] : gridster.margins[1]);
 								}
-								else {
-									gridster.curWidth = gridster.colWidth * gridster.columns +(gridster.outerMargin ? +gridster.margins[1] : gridster.margins[1]);
-								}
-							}
-							else {
+							} else {
 								gridster.curWidth = gridster.width;
 							}
 
@@ -826,7 +857,7 @@
 						function updateHeight() {
 							$elem.css('height', (gridster.gridHeight * gridster.curRowHeight) + (gridster.outerMargin ? gridster.margins[0] : -gridster.margins[0]) + 'px');
 						}
-						scope.$watch(function () {
+						scope.$watch(function() {
 							return gridster.gridHeight;
 						}, updateHeight);
 
@@ -835,7 +866,7 @@
 								$elem.css('width', (gridster.curWidth + 'px'));
 							}
 						}
-						scope.$watch(function () {
+						scope.$watch(function() {
 							return gridster.curWidth;
 						}, updateWidth);
 
@@ -876,11 +907,12 @@
 							});
 						}, 100);
 
+						scope.$watch(function() {
+							return isVisible($elem[0]);
+						}, onResize);
 
 						// see https://github.com/sdecima/javascript-detect-element-resize
-						if (typeof $elem.resize === 'function') {
-							$elem.resize(onResize);
-						} else if (typeof window.addResizeListener === 'function') {
+						if (typeof window.addResizeListener === 'function') {
 							window.addResizeListener($elem[0], onResize);
 						} else {
 							scope.$watch(function() {
@@ -932,6 +964,7 @@
 		};
 
 		this.destroy = function() {
+			// set these to null to avoid the possibility of circular references
 			this.gridster = null;
 			this.$element = null;
 		};
@@ -1422,8 +1455,8 @@
 		};
 	}])
 
-	.factory('GridsterDraggable', ['$document', '$timeout', '$window', 'GridsterTouch',
-		function($document, $timeout, $window, GridsterTouch) {
+	.factory('GridsterDraggable', ['$document', '$window', 'GridsterTouch',
+		function($document, $window, GridsterTouch) {
 			function GridsterDraggable($el, scope, gridster, item, itemOptions) {
 
 				var elmX, elmY, elmW, elmH,
@@ -1448,13 +1481,20 @@
 						return false;
 					}
 
+					var $target = angular.element(e.target);
+
 					// exit, if a resize handle was hit
-					if (angular.element(e.target).hasClass('gridster-item-resizable-handler')) {
+					if ($target.hasClass('gridster-item-resizable-handler')) {
 						return false;
 					}
 
 					// exit, if the target has it's own click event
-					if (angular.element(e.target).attr('onclick') || angular.element(e.target).attr('ng-click')) {
+					if ($target.attr('onclick') || $target.attr('ng-click')) {
+						return false;
+					}
+
+					// only works if you have jQuery
+					if ($target.closest && $target.closest('.gridster-no-drag').length) {
 						return false;
 					}
 
@@ -1491,7 +1531,7 @@
 
 					var maxLeft = gridster.curWidth - 1;
 					if (gridster.maxRows != null) {
-						maxTop = gridster.rowsToPixels(gridster.maxRows)+(gridster.outerMargin ? +gridster.margins[0] : gridster.margins[0]);
+						maxTop = gridster.rowsToPixels(gridster.maxRows) + (gridster.outerMargin ? +gridster.margins[0] : gridster.margins[0]);
 					}
 
 					// Get the current mouse position.
@@ -1670,15 +1710,28 @@
 					});
 				}
 
-				var enabled = false;
+				var enabled = null;
 				var $dragHandles = null;
 				var unifiedInputs = [];
 
 				this.enable = function() {
-					var self = this;
-					// disable and timeout required for some template rendering
-					$timeout(function() {
-						self.disable();
+					if (enabled === true) {
+						return;
+					}
+
+					enabled = true;
+
+					// timeout required for some template rendering
+					$el.ready(function() {
+						if (enabled !== true) {
+							return;
+						}
+
+						// disable any existing draghandles
+						for (var u = 0, ul = unifiedInputs.length; u < ul; ++u) {
+							unifiedInputs[u].disable();
+						}
+						unifiedInputs = [];
 
 						if (gridster.draggable && gridster.draggable.handle) {
 							$dragHandles = angular.element($el[0].querySelectorAll(gridster.draggable.handle));
@@ -1694,22 +1747,21 @@
 							unifiedInputs[h] = new GridsterTouch($dragHandles[h], mouseDown, mouseMove, mouseUp);
 							unifiedInputs[h].enable();
 						}
-
-						enabled = true;
 					});
 				};
 
 				this.disable = function() {
-					if (!enabled) {
+					if (enabled === false) {
 						return;
 					}
+
+					enabled = false;
 
 					for (var u = 0, ul = unifiedInputs.length; u < ul; ++u) {
 						unifiedInputs[u].disable();
 					}
 
 					unifiedInputs = [];
-					enabled = false;
 				};
 
 				this.toggle = function(enabled) {
@@ -1750,10 +1802,10 @@
 					minLeft = 0;
 
 				var getMinHeight = function() {
-					return gridster.curRowHeight - gridster.margins[0];
+					return (item.minSizeY ? item.minSizeY : 1) * gridster.curRowHeight - gridster.margins[0];
 				};
 				var getMinWidth = function() {
-					return gridster.curColWidth - gridster.margins[1];
+					return (item.minSizeX ? item.minSizeX : 1) * gridster.curColWidth - gridster.margins[1];
 				};
 
 				var originalWidth, originalHeight;
@@ -1934,7 +1986,9 @@
 						sizeY = gridster.pixelsToRows(elmH, true);
 					}
 
-					if (gridster.pushing !== false || gridster.getItems(row, col, sizeX, sizeY, item).length === 0) {
+
+					var canOccupy = row > -1 && col > -1 && sizeX + col <= gridster.columns && sizeY + row <= gridster.maxRows;
+					if (canOccupy && (gridster.pushing !== false || gridster.getItems(row, col, sizeX, sizeY, item).length === 0)) {
 						item.row = row;
 						item.col = col;
 						item.sizeX = sizeX;
@@ -2108,8 +2162,7 @@
 								maxSizeY: null
 							};
 							$optionsGetter.assign(scope, options);
-						}
-						else {
+						} else {
 							//set item's id
 							item.id = options.id;
 							if ((options.sizeY > scope.gridster.maxRows) || (options.sizeX > scope.gridster.columns)) {
@@ -2213,21 +2266,22 @@
 					var draggable = new GridsterDraggable($el, scope, gridster, item, options);
 					var resizable = new GridsterResizable($el, scope, gridster, item, options);
 
-					resizable.toggle(!gridster.isMobile && gridster.resizable && gridster.resizable.enabled);
-					draggable.toggle(!gridster.isMobile && gridster.draggable && gridster.draggable.enabled);
+					var updateResizable = function() {
+						resizable.toggle(!gridster.isMobile && gridster.resizable && gridster.resizable.enabled);
+					};
+					updateResizable();
 
-					scope.$on('gridster-draggable-changed', function() {
+					var updateDraggable = function() {
 						draggable.toggle(!gridster.isMobile && gridster.draggable && gridster.draggable.enabled);
-					});
-					scope.$on('gridster-resizable-changed', function() {
-						resizable.toggle(!gridster.isMobile && gridster.resizable && gridster.resizable.enabled);
-					});
-					scope.$on('gridster-resized', function() {
-						resizable.toggle(!gridster.isMobile && gridster.resizable && gridster.resizable.enabled);
-					});
+					};
+					updateDraggable();
+
+					scope.$on('gridster-draggable-changed', updateDraggable);
+					scope.$on('gridster-resizable-changed', updateResizable);
+					scope.$on('gridster-resized', updateResizable);
 					scope.$on('gridster-mobile-changed', function() {
-						resizable.toggle(!gridster.isMobile && gridster.resizable && gridster.resizable.enabled);
-						draggable.toggle(!gridster.isMobile && gridster.draggable && gridster.draggable.enabled);
+						updateResizable();
+						updateDraggable();
 					});
 
 					function whichTransitionEvent() {
@@ -2274,6 +2328,15 @@
 		}
 	])
 
+	.directive('gridsterNoDrag', function() {
+		return {
+			restrict: 'A',
+			link: function(scope, $element) {
+				$element.addClass('gridster-no-drag');
+			}
+		};
+	})
+
 	;
 
-})(angular);
+}));
